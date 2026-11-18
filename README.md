@@ -8,16 +8,16 @@ The experiments use adapted code from [NIDS](https://github.com/mingyan08/NIDS) 
 
 ## Usage
 
-In MATLAB, set the current folder to this repository. Run a `RunAll_*` script to execute the experiments and save results under `results/`, then run the matching `print_*` script to output LaTeX tables from those results. Experiment settings are defined near the top of each script; keep the settings consistent between each pair.
+In MATLAB, set the current folder to this repository. Run a `RunAll_*` script to execute the experiments and save results under `results/`, then run the matching `print_*` script to output LaTeX tables from those results. Experiment settings are defined near the top of each script; keep the settings consistent between each `RunAll_*` and `print_*` pair.
 
-Table numbers refer to the revised manuscript.
+The following are the experiment scripts for reproducing the tables in the paper.
 
 | Experiment | Table(s) | Run experiments | Print tables |
 | --- | --- | --- | --- |
-| Logistic regression, synthetic data | 1 | [RunAll_vs_IDEAL_LR_random.m](RunAll_vs_IDEAL_LR_random.m) | [print_vs_IDEAL_LR_random.m](print_vs_IDEAL_LR_random.m) |
-| Logistic regression, MNIST (0 vs. 8) | 2 | [RunAll_vs_IDEAL_LR_MNIST.m](RunAll_vs_IDEAL_LR_MNIST.m) | [print_vs_IDEAL_LR_MNIST.m](print_vs_IDEAL_LR_MNIST.m) |
-| LASSO, synthetic data | 4 | [RunAll_vs_NIDS_LASSO_random.m](RunAll_vs_NIDS_LASSO_random.m) | [print_vs_NIDS_LASSO_random.m](print_vs_NIDS_LASSO_random.m) |
-| LASSO, LIBSVM: abalone_scale, bodyfat_scale, space_ga_scale | 5, 6, 7, respectively | [RunAll_vs_NIDS_LASSO_LIBSVM.m](RunAll_vs_NIDS_LASSO_LIBSVM.m) | [print_vs_NIDS_LASSO_LIBSVM.m](print_vs_NIDS_LASSO_LIBSVM.m) |
+| Logistic regression on synthetic dataset | 1 | [RunAll_vs_IDEAL_LR_random.m](RunAll_vs_IDEAL_LR_random.m) | [print_vs_IDEAL_LR_random.m](print_vs_IDEAL_LR_random.m) |
+| Logistic regression on MNIST (0 vs. 8) | 2 | [RunAll_vs_IDEAL_LR_MNIST.m](RunAll_vs_IDEAL_LR_MNIST.m) | [print_vs_IDEAL_LR_MNIST.m](print_vs_IDEAL_LR_MNIST.m) |
+| LASSO on synthetic data | 4 | [RunAll_vs_NIDS_LASSO_random.m](RunAll_vs_NIDS_LASSO_random.m) | [print_vs_NIDS_LASSO_random.m](print_vs_NIDS_LASSO_random.m) |
+| LASSO on LIBSVM collections | 5, 6, 7 | [RunAll_vs_NIDS_LASSO_LIBSVM.m](RunAll_vs_NIDS_LASSO_LIBSVM.m) | [print_vs_NIDS_LASSO_LIBSVM.m](print_vs_NIDS_LASSO_LIBSVM.m) |
 
 ## Citation
 
