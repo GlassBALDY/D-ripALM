@@ -15,13 +15,20 @@ saveyes = 1;
 
 
 %% Experiment parameters
-floder_name = 'DiffTolPara_log_reg_MNIST_test';
+floder_name = 'DiffTolPara_log_reg_MNIST_shuffle_v1_test';
 
 digits_pair = [0, 8];  % First digit -> -1; second digit -> +1
 lam = [0.01];
 n_agents = 10;
-ranseed = [0];
+ranseed = 0;
+if ~isnumeric(ranseed) || ~isscalar(ranseed) || ~isreal(ranseed) || ...
+        ~isfinite(ranseed) || ranseed < 0 || ranseed > 2^32-1 || ranseed ~= fix(ranseed)
+    error('realdata:InvalidSeeds', 'ranseed must be an integer scalar in [0, 2^32-1].');
+end
+ranseed = double(ranseed);
 rng(ranseed);
+data_protocol = 'shuffle-before-split-v1';
+shuffle_generator = 'mt19937ar';
 
 % Network topologies
 graph = 'erdos_renyi'; % {'ring', 'erdos_renyi', 'geometric', 'grid'}
@@ -45,6 +52,10 @@ dataset_tag = sprintf('MNIST_%dvs%d', digits_pair(1), digits_pair(2));
 data_dir = fullfile(script_dir, 'data', 'MNIST');
 [X, y] = MNIST_lr_generator(data_dir, digits_pair);
 [max_samples, d] = size(X);
+data_stream = RandStream(shuffle_generator, 'Seed', ranseed);
+sample_order = randperm(data_stream, max_samples);
+X = X(sample_order, :);
+y = y(sample_order, :);
 [X_list, y_list, data_ix] = agent_split(X, y, n_agents);
 % Empty test data retain the existing IDEAL interface; accuracy is unused.
 X_test = zeros(0, d);
@@ -127,7 +138,7 @@ if run_DripALM_FISTA == 1
     if saveyes == 1
         file_name = sprintf('%s%s_%s_lam%s_d%d_n%d_samp%d_graph_%s_seed%d_rho%s_tau%s.mat', ...
             dir_save, alg_name, dataset_tag, num2str(lam), d, n_agents, max_samples, graph, ranseed, num2str(rho), num2str(tau0fista));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
 end
 
@@ -164,7 +175,7 @@ if run_DripALMre_FISTA == 1
     if saveyes == 1
         file_name = sprintf('%s%s_%s_lam%s_d%d_n%d_samp%d_graph_%s_seed%d_rho%s_tau%s.mat', ...
             dir_save, alg_name, dataset_tag, num2str(lam), d, n_agents, max_samples, graph, ranseed, num2str(rho), num2str(tau0fista));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
 end
 
@@ -208,7 +219,7 @@ if run_IDEAL == 1
     if saveyes == 1
         file_name = sprintf('%s%s_%s_lam%s_d%d_n%d_samp%d_graph_%s_seed%d_cval%s_abs_fac%s.mat', ...
             dir_save, alg_name, dataset_tag, num2str(lam), d, n_agents, max_samples, graph, ranseed, num2str(c_val), num2str(abs_fac));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
 end
 

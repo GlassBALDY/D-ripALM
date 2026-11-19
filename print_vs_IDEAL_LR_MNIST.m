@@ -2,11 +2,11 @@
 clear; clc;
 
 %% User configuration
-results_base_dir = fullfile(fileparts(mfilename('fullpath')), 'results', 'DiffTolPara_log_reg_MNIST');
+results_base_dir = fullfile(fileparts(mfilename('fullpath')), 'results', 'DiffTolPara_log_reg_MNIST_shuffle_v1');
 lambdas = [0.01];
 topologies = {'erdos_renyi'};
 tasks = {[0,8]}; % separate table per task; never average across digit pairs
-ranseed = 0;                  % fixed seed, matching RunAll_vs_IDEAL_LR_MNIST.m
+ranseeds = 0:9;
 alg_names = {'IDEAL', 'DripALMre_FISTA'};
 
 d = 784;
@@ -20,6 +20,13 @@ abs_factors = [0.2,0.4,0.6,0.8];
 time_field = 'time_cpu_total';
 time_kind = 'elapsed'; % saved time_cpu_total uses tic/toc
 
+if ~isnumeric(ranseeds) || isempty(ranseeds) || ~isvector(ranseeds) || ...
+        ~isreal(ranseeds) || any(~isfinite(ranseeds(:))) || ...
+        any(ranseeds(:)<0 | ranseeds(:)>2^32-1 | ranseeds(:)~=fix(ranseeds(:))) || ...
+        numel(unique(ranseeds))~=numel(ranseeds)
+    error('logreg:Configuration','ranseeds must be a nonempty vector of distinct integers in [0, 2^32-1].');
+end
+ranseeds=double(ranseeds(:).');
 
 for task_index=1:numel(tasks)
     task = tasks{task_index};
@@ -38,19 +45,22 @@ for task_index=1:numel(tasks)
                     params = rhos(:);
                 end
                 for p=1:size(params,1)
-                    files = {build_filename(results_base_dir,alg_names{a},lam,task,d, ...
-                            n_agents,graph,ranseed,params(p,:),tau0)};
-                    stat=collect_run_stats(files,{task},time_field,stoptol);
+                    files=cell(1,numel(ranseeds));
+                    for k=1:numel(ranseeds)
+                        files{k}=build_filename(results_base_dir,alg_names{a},lam,task,d, ...
+                            n_agents,graph,ranseeds(k),params(p,:),tau0);
+                    end
+                    stat=collect_run_stats(files,ranseeds,time_field,stoptol);
                     stat.params=params(p,:);
                     if p==1, stats{a}=stat; else, stats{a}(p)=stat; end
                 end
             end
             % The archived table packs the first/second halves of IDEAL beside rho.
             % Validate the full setting before emitting any LaTeX.
-            caption=sprintf('MNIST %dvs%d logistic regression, $\\lambda=%s$, seed %d (%d agents).', ...
-                task(1),task(2),num2str(lam),ranseed,n_agents);
+            caption=sprintf('MNIST %dvs%d logistic regression, $\\lambda=%s$, %d shuffled sample allocations (%d agents).', ...
+                task(1),task(2),num2str(lam),numel(ranseeds),n_agents);
             label=sprintf('logreg_MNIST_%dvs%d_lam%s_%s',task(1),task(2),num2str(lam),graph);
-            print_comparison(stats,caption,label,false,time_kind,stoptol);
+            print_comparison(stats,caption,label,numel(ranseeds)>1,time_kind,stoptol);
         end
     end
 end
@@ -90,10 +100,11 @@ fprintf('%s\n','\bottomrule','\end{tabular}}','\par\smallskip');
 fprintf('\\parbox{\\linewidth}{\\scriptsize ');
 if show_std
     fprintf('Counts and times: mean $\\pm$ sample standard deviation over %d seeds ($N-1$ denominator). ',stats{1}(1).n_runs);
-    fprintf('Parentheses: mean outer iterations; KKTres: mean of final per-run $\\max(\\mathrm{feasp},\\mathrm{feasd})$. ');
+    fprintf('Parentheses: mean $\\pm$ sample standard deviation of outer iterations; KKTres: mean of final per-run $\\max(\\mathrm{feasp},\\mathrm{feasd})$. ');
 else
     fprintf('Single run per setting; parentheses: outer iterations; KKTres: final $\\max(\\mathrm{feasp},\\mathrm{feasd})$. ');
 end
+fprintf('Samples are shuffled and repartitioned for each seed. ');
 if strcmp(time_kind,'cpu'), description='CPU time'; else, description='elapsed time'; end
 fprintf('Times are %s in seconds. All termination costs, including unsuccessful runs, are retained. ',description);
 fprintf('Iter. counts saved inner updates; additional global stopping-check communication is excluded.\\par\n');
@@ -114,7 +125,7 @@ end
 
 function cells=metric_cells(stat,show_std)
 if show_std
-    iter=sprintf('%.0f $\\pm$ %.0f (%.0f)',stat.iter_mean,stat.iter_std,stat.outer_mean);
+    iter=sprintf('%.0f $\\pm$ %.0f (%.0f $\\pm$ %.0f)',stat.iter_mean,stat.iter_std,stat.outer_mean,stat.outer_std);
     time=sprintf('%.2f $\\pm$ %.2f',stat.time_mean,stat.time_std);
 else
     iter=sprintf('%.0f (%.0f)',stat.iter_mean,stat.outer_mean);
@@ -148,9 +159,10 @@ end
 file=fullfile(matches(1).folder,matches(1).name);
 end
 
-function stat=collect_run_stats(files,tasks,time_field,stoptol)
-stat=struct('tasks',{tasks},'files',{files},'iters',zeros(1,numel(tasks)), ...
-    'comms',zeros(1,numel(tasks)),'times',zeros(1,numel(tasks)),'residuals',zeros(1,numel(tasks)));
+function stat=collect_run_stats(files,seeds,time_field,stoptol)
+seeds=seeds(:).';
+stat=struct('seeds',seeds,'files',{files},'iters',zeros(size(seeds)), ...
+    'comms',zeros(size(seeds)),'times',zeros(size(seeds)),'residuals',zeros(size(seeds)));
 for k=1:numel(files)
     file=files{k};
     if ~isfile(file), error('logreg:MissingFile','Missing input file: %s',file); end
@@ -159,16 +171,23 @@ for k=1:numel(files)
     catch err
         error('logreg:InvalidFile','Cannot load input file %s: %s',file,err.message);
     end
+    if ~isfield(data,'ranseed') || ~isnumeric(data.ranseed) || ...
+            ~isscalar(data.ranseed) || ~isreal(data.ranseed) || ...
+            ~isfinite(data.ranseed) || data.ranseed~=seeds(k) || ...
+            ~isfield(data,'data_protocol') || ~isequal(data.data_protocol,'shuffle-before-split-v1') || ...
+            ~isfield(data,'shuffle_generator') || ~isequal(data.shuffle_generator,'mt19937ar')
+        error('logreg:InvalidProtocol','File %s: expected shuffled-data protocol and seed %d.',file,seeds(k));
+    end
     stat.iters(k)=checked_value(data,'iters',file,true);
     stat.comms(k)=checked_value(data,'comms',file,true);
     stat.times(k)=checked_value(data,time_field,file,true);
     stat.residuals(k)=max(checked_value(data,'feasp',file,false),checked_value(data,'feasd',file,false));
 end
 stat.iter_mean=mean(stat.comms); stat.iter_std=std(stat.comms,0);
-stat.outer_mean=mean(stat.iters);
+stat.outer_mean=mean(stat.iters); stat.outer_std=std(stat.iters,0);
 stat.time_mean=mean(stat.times); stat.time_std=std(stat.times,0);
 stat.residual_mean=mean(stat.residuals);
-stat.failed_count=sum(stat.residuals>=stoptol); stat.n_runs=numel(tasks);
+stat.failed_count=sum(stat.residuals>=stoptol); stat.n_runs=numel(seeds);
 end
 
 function value=checked_value(data,field,file,scalar_required)

@@ -11,7 +11,7 @@ run_PG_EXTRA = 1;
 saveyes = 1;
 
 %% Experiment parameters
-floder_name = 'Benchmark_LASSO_LIBSVM_test';
+floder_name = 'Benchmark_LASSO_LIBSVM_shuffle_v1_test';
 
 % Bundled LIBSVM datasets (original scale).
 dataset_name = 'abalone_scale';
@@ -19,7 +19,14 @@ dataset_name = 'abalone_scale';
 lam_modulus = 1e-1;
 n_agents = 20;
 ranseed = 2025;
+if ~isnumeric(ranseed) || ~isscalar(ranseed) || ~isreal(ranseed) || ...
+        ~isfinite(ranseed) || ranseed < 0 || ranseed > 2^32-1 || ranseed ~= fix(ranseed)
+    error('realdata:InvalidSeeds', 'ranseed must be an integer scalar in [0, 2^32-1].');
+end
+ranseed = double(ranseed);
 rng(ranseed);
+data_protocol = 'shuffle-before-split-v1';
+shuffle_generator = 'mt19937ar';
 
 % Network topologies
 graph = 'erdos_renyi'; % {'ring', 'erdos_renyi', 'geometric', 'grid'}
@@ -40,9 +47,13 @@ options.sigfun = @(iter) min(1.5^(iter-1), 1e4);
 global KKTres_fun
 load(fullfile(fileparts(mfilename('fullpath')), 'data', 'LIBSVM', [dataset_name, '.mat']), 'A', 'b');
 [m, d] = size(A);
+data_stream = RandStream(shuffle_generator, 'Seed', ranseed);
+sample_order = randperm(data_stream, m);
+A = A(sample_order, :);
+b = b(sample_order, :);
 ATA = A' * A; ATb = A' * b;
 
-% Preserve sample order; agent_split assigns the remainder to the last agent.
+% Shuffle paired rows before splitting; the last agent receives the remainder.
 [A_list, b_list] = agent_split(A, b, n_agents);
 sample_counts = cellfun(@(Ai) size(Ai, 1), A_list).';
 lam_global = lam_modulus*norm(ATb, 'inf');
@@ -118,7 +129,7 @@ if run_DripALMre_FISTA == 1
     if saveyes == 1
         file_name = fullfile(dir_save, sprintf('%s_lam_modu%s_data_%s_d%d_n%d_samp%d_graph_%s_seed%d_rho%s_tau%s.mat', ...
             alg_name, num2str(lam_modulus), dataset_name, d, n_agents, m, graph, ranseed, num2str(rho), num2str(tau0fista)));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
     
 end
@@ -167,7 +178,7 @@ if run_NIDS == 1
     if saveyes == 1
         file_name = fullfile(dir_save, sprintf('%s_lam_modu%s_data_%s_d%d_n%d_samp%d_graph_%s_seed%d.mat', ...
             alg_name, num2str(lam_modulus), dataset_name, d, n_agents, m, graph, ranseed));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
 
 end
@@ -214,7 +225,7 @@ if run_PG_EXTRA == 1
     if saveyes == 1
         file_name = fullfile(dir_save, sprintf('%s_lam_modu%s_data_%s_d%d_n%d_samp%d_graph_%s_seed%d.mat', ...
             alg_name, num2str(lam_modulus), dataset_name, d, n_agents, m, graph, ranseed));
-        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts');
+        save(file_name, 'iters', 'comms', 'feasp', 'feasd', 'time_cpu_total', 'dataset_name', 'sample_counts', 'ranseed', 'data_protocol', 'shuffle_generator');
     end
 
 end
