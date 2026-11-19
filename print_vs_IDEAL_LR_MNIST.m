@@ -55,11 +55,14 @@ for task_index=1:numel(tasks)
                     if p==1, stats{a}=stat; else, stats{a}(p)=stat; end
                 end
             end
-            % The archived table packs the first/second halves of IDEAL beside rho.
+            % Match the synthetic printer: IDEAL above D-ripALM-re.
             % Validate the full setting before emitting any LaTeX.
             caption=sprintf('MNIST %dvs%d logistic regression, $\\lambda=%s$, %d shuffled sample allocations (%d agents).', ...
                 task(1),task(2),num2str(lam),numel(ranseeds),n_agents);
             label=sprintf('logreg_MNIST_%dvs%d_lam%s_%s',task(1),task(2),num2str(lam),graph);
+            if isequal(task,[0,8]) && lam==0.01 && strcmp(graph,'erdos_renyi')
+                label='log-reg-mnist'; % Current manuscript label.
+            end
             print_comparison(stats,caption,label,numel(ranseeds)>1,time_kind,stoptol);
         end
     end
@@ -67,18 +70,19 @@ end
 
 %% Local helpers
 function print_comparison(stats,caption,label,show_std,time_kind,stoptol)
-fprintf('\\begin{table}[t]\n\\centering\n\\footnotesize\n');
+fprintf('\\begin{table}[t]\n\\centering\n\\small\n');
 fprintf('\\setlength{\\tabcolsep}{3pt}\n');
+fprintf('\\renewcommand{\\arraystretch}{1.05}\n');
 fprintf('\\caption{%s}\n\\label{tab:%s}\n',caption,label);
 fprintf('\\resizebox{\\linewidth}{!}{%%\n');
-fprintf('%s\n','\begin{tabular}{llll llll|llll}','\toprule', ...
-    '\multicolumn{8}{c}{IDEAL} & \multicolumn{4}{c}{D-ripALM-re} \\', ...
-    '\cmidrule(lr){1-8}\cmidrule(lr){9-12}');
+fprintf('%s\n','\shortstack[c]{%', ...
+    '\begin{tabular}{@{}llll@{\hspace{12pt}}llll@{}}','\toprule', ...
+    '\multicolumn{8}{c}{IDEAL} \\', '\cmidrule{1-8}');
 headers={'$(\varepsilon_0,\alpha)$','\texttt{iter.(\#)}','\texttt{time(s)}','\texttt{KKTres}'};
-fprintf('%s\n',[strjoin([headers,headers,{'$\rho$'},headers(2:4)],' & ') ' \\'], ...
-    '\cmidrule(lr){1-4}\cmidrule(lr){5-8}\cmidrule(lr){9-12}');
+fprintf('%s\n',[strjoin([headers,headers],' & ') ' \\'], ...
+    '\cmidrule(lr){1-4}\cmidrule(lr){5-8}');
 half=ceil(numel(stats{1})/2);
-for row=1:max(half,numel(stats{2}))
+for row=1:half
     cells={};
     for p=[row,row+half]
         if row<=half && p<=numel(stats{1})
@@ -88,15 +92,18 @@ for row=1:max(half,numel(stats{2}))
             cells=[cells,{'---','---','---','---'}];
         end
     end
-    if row<=numel(stats{2})
-        s=stats{2}(row);
-        cells=[cells,{num2str(s.params)},metric_cells(s,show_std)];
-    else
-        cells=[cells,{'---','---','---','---'}];
-    end
     fprintf('%s\n',[strjoin(cells,' & ') ' \\']);
 end
-fprintf('%s\n','\bottomrule','\end{tabular}}','\par\smallskip');
+fprintf('%s\n','\bottomrule','\end{tabular} \\[8pt]', ...
+    '\begin{tabular}{@{}llll@{}}','\toprule', ...
+    '\multicolumn{4}{c}{D-ripALM-re} \\', '\cmidrule{1-4}', ...
+    [strjoin([{'$\rho$'},headers(2:4)],' & ') ' \\'], '\midrule');
+for row=1:numel(stats{2})
+    s=stats{2}(row);
+    cells=[{num2str(s.params)},metric_cells(s,show_std)];
+    fprintf('%s\n',[strjoin(cells,' & ') ' \\']);
+end
+fprintf('%s\n','\bottomrule','\end{tabular}','}}','\par\smallskip');
 fprintf('\\parbox{\\linewidth}{\\scriptsize ');
 if show_std
     fprintf('Counts and times: mean $\\pm$ sample standard deviation over %d seeds ($N-1$ denominator). ',stats{1}(1).n_runs);

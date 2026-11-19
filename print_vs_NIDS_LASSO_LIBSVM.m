@@ -1,11 +1,11 @@
-% One horizontal three-lambda table per LIBSVM dataset; read saved results only.
+% One six-column table per LIBSVM dataset; read saved results only.
 clear; clc;
 
 %% User configuration
 script_dir = fileparts(mfilename('fullpath'));
 results_base_dir = fullfile(script_dir, 'results', 'Benchmark_LASSO_LIBSVM_shuffle_v1');
-% Report the three bundled LIBSVM datasets by default.
-dataset_names = {'abalone_scale', 'bodyfat_scale', 'space_ga_scale'};
+% Match the two datasets in the current manuscript; add bodyfat_scale if needed.
+dataset_names = {'abalone_scale', 'space_ga_scale'};
 ranseeds = 0:9;
 lam_moduli = [1e-1, 1e-2, 1e-3];
 n_agents = 20;
@@ -53,32 +53,27 @@ for ds=1:numel(dataset_names)
     all_stats{ds}=stats;
 end
 
-%% Old horizontal layout, with elapsed time added inside each lambda group.
+%% Match the synthetic LASSO printer: lambda groups in rows, six columns.
 for ds=1:numel(dataset_names)
     stats=all_stats{ds};
     fprintf('\\begin{table}[t]\n\\centering\n\\footnotesize\n');
-    fprintf('\\setlength{\\tabcolsep}{3pt}\n');
+    fprintf('\\setlength{\\tabcolsep}{4pt}\n');
     fprintf('\\caption{LASSO on %s: $m=%d$, $d=%d$, %d agents, %d shuffled sample allocations.}\n', ...
         strrep(dataset_names{ds},'_','\_'),sizes(ds,1),sizes(ds,2),n_agents,numel(ranseeds));
     fprintf('\\label{tab:lasso_libsvm_%s}\n',dataset_names{ds});
     fprintf('\\resizebox{\\linewidth}{!}{%%\n');
-    fprintf('%s\n',['\begin{tabular}{ll' repmat('ccc',1,lam_count) '}'],'\toprule');
-    fprintf('\\multirow{2}{*}{Topology} & \\multirow{2}{*}{Method}');
+    fprintf('%s\n','\begin{tabular}{lllccc}','\toprule');
+    fprintf('%s\n','$\lambda_c$ & Topology & Method & \texttt{iter.(\#)} & \texttt{time(s)} & \texttt{KKTres} \\', '\midrule');
     for l=1:lam_count
-        lambda=format_lambda(lam_moduli(l));
-        fprintf(' & \\multicolumn{3}{c}{$\\lambda_c=%s$}',lambda(2:end-1));
-    end
-    fprintf('%s\n',' \\');
-    for l=1:lam_count, fprintf('\\cmidrule(lr){%d-%d}',3*l,3*l+2); end
-    fprintf('\n & ');
-    for l=1:lam_count, fprintf(' & \\texttt{iter.(\\#)} & \\texttt{time(s)} & \\texttt{KKTres}'); end
-    fprintf('%s\n',' \\','\midrule');
-    for g=1:graph_count
-        for a=1:alg_count
-            topology='';
-            if a==1, topology=sprintf('\\multirow{%d}{*}{%s}',alg_count,graphs_latex{g}); end
-            fprintf('%s & %s',topology,color_method_entry(alg_display{a},alg_names{a}));
-            for l=1:lam_count
+        for g=1:graph_count
+            for a=1:alg_count
+                lambda_cell=''; topology_cell='';
+                if g==1 && a==1
+                    lambda_cell=sprintf('\\multirow{%d}{*}[-5.4pt]{%s}',graph_count*alg_count,format_lambda(lam_moduli(l)));
+                end
+                if a==1
+                    topology_cell=sprintf('\\multirow{%d}{*}{%s}',alg_count,graphs_latex{g});
+                end
                 s=stats(g,a,l);
                 if show_std
                     iter=sprintf('%.0f $\\pm$ %.0f',s.iter_mean,s.iter_std);
@@ -91,12 +86,13 @@ for ds=1:numel(dataset_names)
                     if contains(alg_names{a},'DripALM'), iter=[iter sprintf(' (%.0f)',s.outer_mean)]; end
                     time=sprintf('%.2f',s.time_mean);
                 end
-                cells={iter,time,sprintf('%.1e',s.residual_mean)};
-                for c=1:3, fprintf(' & %s',color_method_entry(cells{c},alg_names{a})); end
+                cells={alg_display{a},iter,time,sprintf('%.1e',s.residual_mean)};
+                for c=1:numel(cells), cells{c}=color_method_entry(cells{c},alg_names{a}); end
+                fprintf('%s\n',[strjoin([{lambda_cell,topology_cell},cells],' & ') ' \\']);
             end
-            fprintf('%s\n',' \\');
+            if g<graph_count, fprintf('\\cmidrule(lr){2-6}\n'); end
         end
-        if g<graph_count, fprintf('\\midrule\n'); end
+        if l<lam_count, fprintf('\\midrule\n'); end
     end
     fprintf('%s\n','\bottomrule','\end{tabular}}','\par\smallskip');
     fprintf('\\parbox{\\linewidth}{\\scriptsize ');
