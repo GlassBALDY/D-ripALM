@@ -76,4 +76,4 @@ If you find this code useful in your research, we would appreciate a citation to
 
 ## License
 
-The D-ripALM code is distributed under the [MIT License](LICENSE). For the downloaded benchmark code, retain the original authors' notices and follow the terms in their repositories.
+The original D-ripALM code is distributed under the [MIT License](LICENSE). Third-party code and datasets are not covered by this project's MIT license. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for the bundled code's sources, applicable notices, and the unresolved licensing status of the NIDS adaptation. Retain the original notices and follow the applicable upstream terms when adding benchmark code.
