@@ -12,12 +12,10 @@ saveyes = 1;
 
 %% Experiment parameters
 floder_name = 'Benchmark_LASSO_LIBSVM_test';
-% Change floder_name when changing the custom sample allocation.
 
 % Bundled LIBSVM datasets (original scale).
 dataset_name = 'abalone_scale';
-sample_counts = []; % Empty: balanced; otherwise n_agents positive integers summing to m.
-% Require n_agents <= m for balanced splitting and nonzero local Ai.
+% Require n_agents <= m and nonzero local Ai.
 lam_modulus = 1e-1;
 n_agents = 20;
 ranseed = 2025;
@@ -42,24 +40,11 @@ options.sigfun = @(iter) min(1.5^(iter-1), 1e4);
 global KKTres_fun
 load(fullfile(fileparts(mfilename('fullpath')), 'data', 'LIBSVM', [dataset_name, '.mat']), 'A', 'b');
 [m, d] = size(A);
-perm = randperm(m);
-A = A(perm, :);
-b = b(perm);
 ATA = A' * A; ATb = A' * b;
 
-if isempty(sample_counts)
-    sample_counts = floor(m / n_agents) * ones(1, n_agents);
-    sample_counts(1:mod(m, n_agents)) = sample_counts(1:mod(m, n_agents)) + 1;
-end
-A_list = cell(n_agents, 1);
-b_list = cell(n_agents, 1);
-start_idx = 1;
-for i = 1:n_agents
-    end_idx = start_idx + sample_counts(i) - 1;
-    A_list{i} = A(start_idx:end_idx, :);
-    b_list{i} = b(start_idx:end_idx);
-    start_idx = end_idx + 1;
-end
+% Preserve sample order; agent_split assigns the remainder to the last agent.
+[A_list, b_list] = agent_split(A, b, n_agents);
+sample_counts = cellfun(@(Ai) size(Ai, 1), A_list).';
 lam_global = lam_modulus*norm(ATb, 'inf');
 lam_local = lam_global / n_agents;
 

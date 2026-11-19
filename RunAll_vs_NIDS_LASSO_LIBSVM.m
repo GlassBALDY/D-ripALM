@@ -19,7 +19,7 @@ dataset_names = {'abalone_scale', 'bodyfat_scale', 'space_ga_scale'};
 lam_moduli = [1e-1, 1e-2, 1e-3];
 % Require n_agents <= m for each dataset and nonzero local Ai.
 n_agents = 20;
-ranseeds = 0;  % Fixed seed for sample allocation and random networks.
+ranseeds = 0;  % Fixed seed for random networks.
 
 % Network topologies
 graphs = {'ring', 'erdos_renyi', 'geometric'};
@@ -42,29 +42,22 @@ for dataset_ = dataset_names
     dataset_name = dataset_{1};
     data = load(fullfile(fileparts(mfilename('fullpath')), 'data', 'LIBSVM', [dataset_name, '.mat']), 'A', 'b');
     [m, d] = size(data.A);
-    sample_counts = floor(m / n_agents) * ones(1, n_agents);
-    sample_counts(1:mod(m, n_agents)) = sample_counts(1:mod(m, n_agents)) + 1;
 
     for ranseed = ranseeds
         rng(ranseed);
-        perm = randperm(m);
-        A = data.A(perm, :);
-        b = data.b(perm);
+        A = data.A;
+        b = data.b;
         ATA = A' * A; ATb = A' * b;
-        A_list = cell(n_agents, 1);
-        b_list = cell(n_agents, 1);
+        % Preserve sample order; agent_split assigns the remainder to the last agent.
+        [A_list, b_list] = agent_split(A, b, n_agents);
+        sample_counts = cellfun(@(Ai) size(Ai, 1), A_list).';
         local_grads = cell(n_agents, 1);
         L_f_local = zeros(n_agents, 1);
-        start_idx = 1;
         for i = 1:n_agents
-            end_idx = start_idx + sample_counts(i) - 1;
-            A_list{i} = A(start_idx:end_idx, :);
-            b_list{i} = b(start_idx:end_idx);
             Ai = A_list{i};
             bi = b_list{i};
             local_grads{i} = @(x) Ai' * (Ai * x - bi);
             L_f_local(i) = max(eig(Ai' * Ai));
-            start_idx = end_idx + 1;
         end
         L_f = max(L_f_local);
         fprintf('Local L_f values: %s \n', mat2str(L_f_local, 4));
