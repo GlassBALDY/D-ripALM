@@ -13,8 +13,8 @@ saveyes = 1;
 %% Experiment parameters
 floder_name = 'Benchmark_LASSO_LIBSVM_shuffle_v1_test';
 
-% Bundled LIBSVM datasets (original scale).
-dataset_name = 'abalone_scale';
+% LIBSVM datasets reported in the paper (original scale).
+dataset_name = 'abalone_scale'; % 'abalone_scale' or 'space_ga_scale'
 % Require n_agents <= m and nonzero local Ai.
 lam_modulus = 1e-1;
 n_agents = 20;

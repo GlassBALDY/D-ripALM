@@ -14,8 +14,8 @@ saveyes = 1;
 % D-ripALM-re uses the default restart strategy.
 floder_name = 'Benchmark_LASSO_LIBSVM_shuffle_v1';
 
-% Bundled LIBSVM datasets (original scale).
-dataset_names = {'abalone_scale', 'bodyfat_scale', 'space_ga_scale'};
+% LIBSVM datasets reported in the paper (original scale).
+dataset_names = {'abalone_scale', 'space_ga_scale'};
 lam_moduli = [1e-1, 1e-2, 1e-3];
 % Require n_agents <= m for each dataset and nonzero local Ai.
 n_agents = 20;
