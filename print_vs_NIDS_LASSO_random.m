@@ -60,7 +60,6 @@ for di=1:numel(d_list)
 end
 
 %% Six-column LaTeX tables (booktabs and multirow).
-% D-ripALM-re uses \blue{...}; define it in the target preamble.
 for di=1:numel(d_list)
     d = d_list(di);
     for li=1:numel(Lmax_list)
@@ -87,9 +86,6 @@ for di=1:numel(d_list)
                     method_cells = {alg_display{a}, ...
                         format_iteration_entry(stat,contains(alg_names{a},'DripALM')), ...
                         format_time_entry(stat),format_sci(stat.residual_mean)};
-                    for c=1:numel(method_cells)
-                        method_cells{c} = color_method_entry(method_cells{c},alg_names{a});
-                    end
                     fprintf('%s & %s & %s & %s & %s & %s \\\\\n',lambda_cell,topology_cell,method_cells{:});
                 end
                 if g<graph_count, fprintf('\\cmidrule(lr){2-6}\n'); end

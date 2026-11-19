@@ -87,7 +87,6 @@ for ds=1:numel(dataset_names)
                     time=sprintf('%.2f',s.time_mean);
                 end
                 cells={alg_display{a},iter,time,sprintf('%.1e',s.residual_mean)};
-                for c=1:numel(cells), cells{c}=color_method_entry(cells{c},alg_names{a}); end
                 fprintf('%s\n',[strjoin([{lambda_cell,topology_cell},cells],' & ') ' \\']);
             end
             if g<graph_count, fprintf('\\cmidrule(lr){2-6}\n'); end
@@ -125,12 +124,6 @@ fprintf('Not reaching tolerance (final KKTres $\\geq$ \\texttt{%.0e}), failed/$N
 end
 
 %% Local helpers
-function str = color_method_entry(str,alg_name)
-if contains(alg_name,'DripALM')
-    str = ['\blue{' str '}'];
-end
-end
-
 function file_name = build_filename(base_dir,alg_name,lam_mod,dataset_name,graph,d,n_agents,m,ranseed,rho,tau0)
 folder = fullfile(dataset_name,sprintf('lambda_modu%s_graph_%s',num2str(lam_mod),graph));
 name = sprintf('%s_lam_modu%s_data_%s_d%d_n%d_samp%d_graph_%s_seed%d', ...
